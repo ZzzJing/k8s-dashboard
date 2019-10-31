@@ -79,6 +79,20 @@ type AuthManager interface {
 	AuthenticationModes() []AuthenticationMode
 }
 
+// AuthManagerNew is used for user authentication management, add GetTokenManager.
+type AuthManagerNew interface {
+	// Login authenticates user based on provided LoginSpec and returns AuthResponse. AuthResponse contains
+	// generated token and list of non-critical errors such as 'Failed authentication'.
+	Login(*LoginSpec) (*AuthResponse, error)
+	// Refresh takes valid token that hasn't expired yet and returns a new one with expiration time set to TokenTTL. In
+	// case provided token has expired, token expiration error is returned.
+	Refresh(string) (string, error)
+	// AuthenticationModes returns array of auth modes supported by dashboard.
+	AuthenticationModes() []AuthenticationMode
+
+	GetTokenManager() TokenManager
+}
+
 // TokenManager is responsible for generating and decrypting tokens used for authorization. Authorization is handled
 // by K8S apiserver. Token contains AuthInfo structure used to create K8S api client.
 type TokenManager interface {

@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"net/url"
 
 	"github.com/kubernetes/dashboard/src/app/backend/args"
 	"github.com/kubernetes/dashboard/src/app/backend/auth"
@@ -150,6 +151,8 @@ func main() {
 	http.Handle("/api/appConfig.json", handler.AppHandler(handler.ConfigHandler))
 	http.Handle("/api/sockjs/", handler.CreateAttachHandler("/api/sockjs"))
 	http.Handle("/metrics", prometheus.Handler())
+	//Set cookie and redirct to / when get /jweToken
+	http.Handle("/jweToken", MakeRedirectHandler(authManager.GetTokenManager()))
 
 	// Listen for http or https
 	if servingCerts != nil {
@@ -169,7 +172,7 @@ func main() {
 	select {}
 }
 
-func initAuthManager(clientManager clientapi.ClientManager) authApi.AuthManager {
+func initAuthManager(clientManager clientapi.ClientManager) authApi.AuthManagerNew {
 	insecureClient := clientManager.InsecureClient()
 
 	// Init default encryption key synchronizer
@@ -230,4 +233,25 @@ func handleFatalInitError(err error) {
 		"--apiserver-host param points to a server that does not exist. Reason: %s\n"+
 		"Refer to our FAQ and wiki pages for more information: "+
 		"https://github.com/kubernetes/dashboard/wiki/FAQ", err)
+}
+
+func MakeRedirectHandler(tokenManager authApi.TokenManager) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		jweToken := r.Form["token"][0]
+		decodeToken,err := url.QueryUnescape(jweToken)
+		if err != nil {
+			fmt.Println(err)
+		}
+		_, error := tokenManager.Decrypt(decodeToken)
+		if error == nil {
+			http.SetCookie(w, &http.Cookie{
+				Name:  "jweToken",
+				Value: jweToken,
+			})
+		}
+	
+		target := "/"
+		http.Redirect(w, r, target, http.StatusFound)
+	})
 }
