@@ -94,9 +94,13 @@ func (self authManager) healthCheck(authInfo api.AuthInfo) error {
 	return self.clientManager.HasAccess(authInfo)
 }
 
+func (self authManager) GetTokenManager() authApi.TokenManager {
+	return self.tokenManager
+}
+
 // NewAuthManager creates auth manager.
 func NewAuthManager(clientManager clientapi.ClientManager, tokenManager authApi.TokenManager,
-	authenticationModes authApi.AuthenticationModes, authenticationSkippable bool) authApi.AuthManager {
+	authenticationModes authApi.AuthenticationModes, authenticationSkippable bool) authApi.AuthManagerNew {
 	return &authManager{
 		tokenManager:            tokenManager,
 		clientManager:           clientManager,
